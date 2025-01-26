@@ -1,5 +1,0 @@
-﻿  SGP4.cpp
-C:\Users\Zuben\source\repos\SSlib\SSlib\SGP4.cpp(131,9): warning C4551: в вызове функции отсутствует список аргументов
-C:\Users\Zuben\source\repos\SSlib\SSlib\SGP4.cpp(277,56): warning C4244: +=: преобразование "double" в "int", возможна потеря данных
-C:\Users\Zuben\source\repos\SSlib\SSlib\SGP4.cpp(337,11): warning C4267: инициализация: преобразование из "size_t" в "int"; возможна потеря данных
-  SSlib.vcxproj -> C:\Users\Zuben\source\repos\SSlib\x64\Debug\SSlib.exe
