@@ -7,7 +7,7 @@
 #include <cmath>
 #include <chrono>
 #include <sstream>
-#include "SGP4.h"
+#include "SatSelect.h"
 
 #pragma warning(disable : 4996)
 
