@@ -1,11 +1,9 @@
-#include<iostream>
-#include<string>
+#include <iostream>
+#include <string>
 #include "SGP4.h"
 #include <vector>
+#include <thread>
 
-#include<thread>
-
-//пример реализации
 int main() {
 	
 	std::vector<NORAD_DATA> Satellites;
@@ -22,9 +20,12 @@ int main() {
 	st.lim.timeMinObserveSec = 50;
 	SetelliteSelect tmp(file, st);
 	tmp.dataPrepare();
-	for (int i = 0; i < 50; i++) {
-		tmp.GetSatArray();
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-	}
+	Satellites = tmp.GetSatArray();
+	// for (int i = 0; i < 50; i++) {
+	// 	Satellites = tmp.GetSatArray();
+	// 	std::this_thread::sleep_for(std::chrono::seconds(5));
+	// }
+	tmp.showSat(Satellites);
+
 	return 0;
 }
