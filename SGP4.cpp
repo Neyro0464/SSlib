@@ -1,29 +1,34 @@
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <ctime>
-#include <vector>
-#include <algorithm>
-#include <cmath>
-#include <chrono>
-#include <sstream>
 #include "SGP4.h"
 #pragma warning(disable : 4996)
 
 using namespace std;
 using namespace std::chrono;
 
-double DegToRad(double arg) {
+SetelliteSelect::SetelliteSelect(const std::string& filename, Station& param)
+{
+    this->Satellites = {};
+    this->filename = filename;
+    param.geo.Lon = DegToRad(param.geo.Lon);
+    param.geo.Lat = DegToRad(param.geo.Lat);
+    param.lim.minAzm = DegToRad(param.lim.minAzm);
+    param.lim.maxAzm = DegToRad(param.lim.maxAzm);
+    param.lim.minElv = DegToRad(param.lim.minElv);
+    param.lim.maxElv = DegToRad(param.lim.maxElv);
+    this->station = param;
+    dataPrepare();
+}
+
+double SetelliteSelect::DegToRad(double arg) {
     return (double)(arg / 360.0 * (2.0 * PI));
 }
-double RadToDeg(double arg) {
+double SetelliteSelect::RadToDeg(double arg) {
     return (double)(arg / (2.0 * PI) * 360.0);
 }
 // Convertation LLA coordinates to Decart coordinates
 // previously converted to radians!!!!
 // (0;0;0) is center of planet
 // (6371;0;0) is lan = 0, lon = 0, alt = 0
-CoordDecart ConvertGEOtoDecart(CoordGeodetic& Object) {
+CoordDecart SetelliteSelect::ConvertGEOtoDecart(CoordGeodetic& Object) {
     double x = (6371.0 + Object.Alt) * cos(Object.Lat) * cos(Object.Lon);
     double y = (6371.0 + Object.Alt) * cos(Object.Lat) * sin(Object.Lon);
     double z = (6371.0 + Object.Alt) * sin(Object.Lat);
@@ -31,7 +36,7 @@ CoordDecart ConvertGEOtoDecart(CoordGeodetic& Object) {
 }
 
 // Transfer satellite coordinate system in station coodinate system
-CoordDecart Transferring(CoordDecart object, CoordGeodetic Station) {
+CoordDecart SetelliteSelect::Transferring(CoordDecart object, CoordGeodetic Station) {
     double x = object.x;
     double y = object.y;
     double z = object.z;
@@ -51,7 +56,7 @@ CoordDecart Transferring(CoordDecart object, CoordGeodetic Station) {
 
 // Calculate satellite position with class function
 // then convert to Decart coordinates 
-CoordDecart SatellitePos(CSGP4_SDP4 SGP, CoordGeodetic& SatelliteLLA_1, CoordDecart Satellite_1, double time) {
+CoordDecart SetelliteSelect::SatellitePos(CSGP4_SDP4 SGP, CoordGeodetic& SatelliteLLA_1, CoordDecart Satellite_1, double time) {
 
     SGP.CalculateLatLonAlt(time);
     SatelliteLLA_1.Lat = SGP.GetLat();
@@ -66,7 +71,7 @@ CoordDecart SatellitePos(CSGP4_SDP4 SGP, CoordGeodetic& SatelliteLLA_1, CoordDec
 }
 
 // Checking if velocity of satellite does not exceed 1.9 deg/min
-bool VelocityCheck(Station station, CSGP4_SDP4 SatelliteModel) {
+bool SetelliteSelect::VelocityCheck(Station station, CSGP4_SDP4 SatelliteModel) {
 
     CoordDecart Satellite_1 = { 0,0,0 };
     CoordDecart Satellite_2 = { 0,0,0 };
@@ -122,29 +127,65 @@ bool VelocityCheck(Station station, CSGP4_SDP4 SatelliteModel) {
 //    file.close();
 //}
 
-void SetelliteSelect::dataPrepare()
-{
+void SetelliteSelect::dataPrepare() {
     auto Sat = this->Satellites;
     std::ifstream file(filename);
     if (!file.is_open()) {
-        std::cout << "ERRO: File is not open " << std::endl;
-        exit;
+        std::cout << "ERROR: Could not open file " << filename << std::endl;
+        exit(1);
     }
 
-    char m_cLine0[70];
-    char m_cLine1[70];
-    char m_cLine2[70];
+    std::cout << "File opened successfully, attempting to read" << std::endl;
 
-    while (file.getline(m_cLine0, sizeof(m_cLine0)) &&
-        file.getline(m_cLine1, sizeof(m_cLine1)) &&
-        file.getline(m_cLine2, sizeof(m_cLine2))) {
-        Sat.push_back(CSGP4_SDP4(m_cLine0, m_cLine1, m_cLine2));
-        if (VelocityCheck(station, Sat.back())) {
-            Sat.pop_back();
+    std::string m_cLine0, m_cLine1, m_cLine2;
+    int count = 0;
+    int totalLines = 0;
+
+    while (true) {
+        // Читаем имя спутника
+        if (!std::getline(file, m_cLine0)) break;  // Выход при достижении конца файла или ошибки
+        if (m_cLine0.empty()) {
+            std::cout << "Skipping empty line" << std::endl;
+            continue;
+        }
+
+        // Читаем первую строку TLE (должна начинаться с "1")
+        if (!std::getline(file, m_cLine1) || m_cLine1.empty() || m_cLine1[0] != '1') {
+            std::cout << "Invalid or missing Line 1 after: " << m_cLine0 << std::endl;
+            break;
+        }
+
+        // Читаем вторую строку TLE (должна начинаться с "2")
+        if (!std::getline(file, m_cLine2) || m_cLine2.empty() || m_cLine2[0] != '2') {
+            std::cout << "Invalid or missing Line 2 after: " << m_cLine0 << " | " << m_cLine1 << std::endl;
+            break;
+        }
+        totalLines++;
+
+        // Преобразуем std::string в char[] для CSGP4_SDP4
+        char line0[70], line1[70], line2[70];
+        strncpy(line0, m_cLine0.c_str(), sizeof(line0) - 1); line0[sizeof(line0) - 1] = '\0';
+        strncpy(line1, m_cLine1.c_str(), sizeof(line1) - 1); line1[sizeof(line1) - 1] = '\0';
+        strncpy(line2, m_cLine2.c_str(), sizeof(line2) - 1); line2[sizeof(line2) - 1] = '\0';
+
+        try {
+            Sat.push_back(CSGP4_SDP4(line0, line1, line2));
+            if (VelocityCheck(station, Sat.back())) {
+                Sat.pop_back();
+            }
+            else {
+                count++;
+            }
+        }
+        catch (const std::exception& e) {
+            std::cout << "Error creating CSGP4_SDP4: " << e.what() << std::endl;
         }
     }
+
     file.close();
     this->Satellites = Sat;
+    std::cout << "Total TLE sets read: " << totalLines << std::endl;
+    std::cout << "Loaded " << count << " satellites after velocity check" << std::endl;
 }
 
 
@@ -201,7 +242,7 @@ bool SetelliteSelect::SetFilter(Station& station)
 
 
 // Checking intersection: if satellite in view area of station
-bool IntersectCheck(CoordDecart& Satellite_1, Station station, double& theta, double& fi) {
+bool SetelliteSelect::IntersectCheck(CoordDecart& Satellite_1, Station station, double& theta, double& fi) {
     double x = Satellite_1.x;
     double y = Satellite_1.y;
     double z = Satellite_1.z;
@@ -234,7 +275,7 @@ bool IntersectCheck(CoordDecart& Satellite_1, Station station, double& theta, do
 
 // checks the intersection of the satellite with the station's visibility cone (+30 sec to +30 min)
 //  Filter satellites that would be in cone of visibility for timeMinObserve(sec)
-double TimeIntersect(CSGP4_SDP4& SatelliteModel, Station& station, double& theta, double& fi) { //remake
+double SetelliteSelect::TimeIntersect(CSGP4_SDP4& SatelliteModel, Station& station, double& theta, double& fi) { //remake
     auto now = system_clock::now();
     auto now_time_t = system_clock::to_time_t(now);
     auto now_tm = *gmtime(&now_time_t); // Working in UTC time
@@ -286,7 +327,7 @@ double TimeIntersect(CSGP4_SDP4& SatelliteModel, Station& station, double& theta
 }
 
 // Check direction by defining sign of the angle between station and satellite
-bool getDiraction(Station station, CSGP4_SDP4& SatelliteModel) {
+bool SetelliteSelect::getDiraction(Station station, CSGP4_SDP4& SatelliteModel) {
     CoordDecart Satellite_1 = { 0, 0, 0 }; // coordinates at the first moment
     CoordDecart Satellite_2 = { 0, 0, 0 }; // coordinates at the second moment
     CoordGeodetic SatelliteLLA;
@@ -319,21 +360,11 @@ bool getDiraction(Station station, CSGP4_SDP4& SatelliteModel) {
     }
 }
 
-//Load file which contains tle/NORAD data
-void SetelliteSelect::SetTLEFile(std::string file)
-{
-    std::cout << "Enter filename with TLE data (without txt): ";
-    std::cin >> file;
-    file += ".txt";
-    this->filename = file;
-}
-
-
-void SetelliteSelect::GetSatArray() {
+const std::vector<NORAD_DATA> SetelliteSelect::GetSatArray() {
 
     std::vector<NORAD_DATA> Objects;
     COORDS dummy;
-    auto stationtmp = this->station;
+    Station stationtmp = this->station;
     int N = Satellites.size();      // number of satellites that passed verification by speed
     double time = 0;                // time when satellite will be in cone of view
     unsigned int satNumer = 0;      // NORAD satellite number
@@ -342,7 +373,6 @@ void SetelliteSelect::GetSatArray() {
     std::stringstream onTime;
     tm timeDate;
     bool dir = 0;
-    auto begin = std::chrono::steady_clock::now();
     for (int i = 0; i < N; i++) {
         time = TimeIntersect(Satellites[i], stationtmp, theta, fi);
         if (time != 0) {
@@ -367,52 +397,25 @@ void SetelliteSelect::GetSatArray() {
             Objects.push_back({ s->cSatelliteName, satNumer, onTime.str(), dummy, time, dir });
             onTime.str("");
         }
-        
+
     }
-    auto end = std::chrono::steady_clock::now();
-    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
-    std::cout << "The time: " << elapsed_ms.count() << " ms\n";
 
     std::sort(Objects.begin(), Objects.end(), [](const NORAD_DATA& a, const NORAD_DATA& b)
         {return a.time < b.time; }
     );
 
-    showSat(Objects);
+    return Objects;
 }
 
-//NEW
-void SetelliteSelect::showSat(std::vector<NORAD_DATA>& SatellitesRes) {
+void SetelliteSelect::showSat(const std::vector<NORAD_DATA>& SatellitesRes) {
     std::cout << std::fixed;
     std::cout << std::setprecision(2);
     for (const auto& item : SatellitesRes) {
 
         std::cout << item.name << "|" << item.noradNumber << " |" << item.coords.topo.azm << "|" << item.coords.topo.elv << "| "
             << item.coords.geo.Lat << " |" << item.coords.geo.Lon << " |" << item.coords.geo.Alt << " | "
-            << item.dirPositive << " | " << item.onTime<< std::endl;
+            << item.dirPositive << " | " << item.onTime << std::endl;
     }
 }
 
-SetelliteSelect::SetelliteSelect()
-{
-    this->Satellites = {};
-    SetTLEFile(this->filename);
-    SetStationPos(this->station);
-    SetFilter(this->station);
-}
 
-SetelliteSelect::SetelliteSelect(const std::string& filename, Station& param)
-{
-    this->Satellites = {};
-    this->filename = filename;
-    param.geo.Lon = DegToRad(param.geo.Lon);
-    param.geo.Lat = DegToRad(param.geo.Lat);
-    param.lim.minAzm = DegToRad(param.lim.minAzm);
-    param.lim.maxAzm = DegToRad(param.lim.maxAzm);
-    param.lim.minElv = DegToRad(param.lim.minElv);
-    param.lim.maxElv = DegToRad(param.lim.maxElv);
-    this->station = param;
-}
-
-SetelliteSelect::~SetelliteSelect()
-{
-}

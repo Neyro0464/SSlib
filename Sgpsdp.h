@@ -1,7 +1,14 @@
+#ifndef SGPSDP_H
+#define SGPSDP_H
+
+#include <iostream>
+#include<cstring>
+#include <string>
 #include <stdio.h>
 #include <ctime>
 #include <time.h>
 #include <chrono>
+#include <cmath> 
 
 //* Already defined in  >stdafx.h<
 typedef struct tagVECTOR {
@@ -157,3 +164,6 @@ public:
     void        VecSum(double* X, double* Y, double* Z, int N);
     void        VecScale(double u, double* X, double* Y, int N);
 };
+
+
+#endif //SGPSDP_H
