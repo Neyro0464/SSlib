@@ -3,6 +3,7 @@
 
 using namespace std;
 using namespace std::chrono;
+using namespace Sgpsdp;
 
 SetelliteSelect::SetelliteSelect(const std::string& filename, Station& param)
 {
@@ -32,7 +33,11 @@ CoordDecart SetelliteSelect::ConvertGEOtoDecart(CoordGeodetic& Object) {
     double x = (6371.0 + Object.Alt) * cos(Object.Lat) * cos(Object.Lon);
     double y = (6371.0 + Object.Alt) * cos(Object.Lat) * sin(Object.Lon);
     double z = (6371.0 + Object.Alt) * sin(Object.Lat);
-    return { x, y, z };
+    Sgpsdp::CoordDecart result;
+    result.x = x;
+    result.y = y;
+    result.z = z;
+    return result;
 }
 
 // Transfer satellite coordinate system in station coodinate system
@@ -50,8 +55,11 @@ CoordDecart SetelliteSelect::Transferring(CoordDecart object, CoordGeodetic Stat
     double x0 = cos(beta) * (x * cos(alpha) - y * sin(alpha)) - z * sin(beta);
     double y0 = x * sin(alpha) + y * cos(alpha);
     double z0 = sin(beta) * (x * cos(alpha) - y * sin(alpha)) + z * cos(beta);
-
-    return { x0, y0, z0 };
+    Sgpsdp::CoordDecart result;
+    result.x = x0;
+    result.y = y0;
+    result.z = z0;
+    return result;
 }
 
 // Calculate satellite position with class function
@@ -73,9 +81,9 @@ CoordDecart SetelliteSelect::SatellitePos(CSGP4_SDP4 SGP, CoordGeodetic& Satelli
 // Checking if velocity of satellite does not exceed 1.9 deg/min
 bool SetelliteSelect::VelocityCheck(Station station, CSGP4_SDP4 SatelliteModel) {
 
-    CoordDecart Satellite_1 = { 0,0,0 };
-    CoordDecart Satellite_2 = { 0,0,0 };
-    CoordGeodetic SatelliteGEO;
+    CoordDecart Satellite_1{};
+    CoordDecart Satellite_2 {};
+    CoordGeodetic SatelliteGEO{};
 
     auto now = system_clock::now();
     auto now_time_t = system_clock::to_time_t(now);
@@ -293,7 +301,7 @@ double SetelliteSelect::TimeIntersect(CSGP4_SDP4& SatelliteModel, Station& stati
     double upperTm = SatelliteModel.JulianDate(upperTime); // upper bound of time interval
 
     CoordGeodetic SatelliteLLA_1;
-    CoordDecart Satellite_1 = { 0, 0, 0 };
+    CoordDecart Satellite_1{};
     bool check1 = 0;
 
     //searching if Satellite will be in vision cone sometime in the time interval
@@ -328,8 +336,8 @@ double SetelliteSelect::TimeIntersect(CSGP4_SDP4& SatelliteModel, Station& stati
 
 // Check direction by defining sign of the angle between station and satellite
 bool SetelliteSelect::getDiraction(Station station, CSGP4_SDP4& SatelliteModel) {
-    CoordDecart Satellite_1 = { 0, 0, 0 }; // coordinates at the first moment
-    CoordDecart Satellite_2 = { 0, 0, 0 }; // coordinates at the second moment
+    CoordDecart Satellite_1{}; // coordinates at the first moment
+    CoordDecart Satellite_2{}; // coordinates at the second moment
     CoordGeodetic SatelliteLLA;
 
     double len = 0.0, len2 = 0.0; // to calculate radius vector
@@ -370,32 +378,36 @@ const std::vector<NORAD_DATA> SetelliteSelect::GetSatArray() {
     unsigned int satNumer = 0;      // NORAD satellite number
     double theta = 0;               // ELV
     double fi = 0;                  // AZM
-    std::stringstream onTime;
+    std::stringstream onTime1;
     tm timeDate;
     bool dir = 0;
     for (int i = 0; i < N; i++) {
         time = TimeIntersect(Satellites[i], stationtmp, theta, fi);
         if (time != 0) {
-            satNumer = Satellites[i].GetNORAD();
+            NORAD_DATA dummy{};
+            dummy.noradNumber = Satellites[i].GetNORAD();
             SATELLITE* s = (SATELLITE*)Satellites[i].GetSatellite();
-            dir = getDiraction(stationtmp, Satellites[i]);
+            dummy.dirPositive = getDiraction(stationtmp, Satellites[i]);
             Satellites[i].SGP(time);
             Satellites[i].CalculateLatLonAlt(time);
-            dummy.geo.Lat = Satellites[i].GetLat();
-            dummy.geo.Lon = Satellites[i].GetLon();
-            dummy.geo.Alt = Satellites[i].GetAlt();
-            dummy.topo.azm = Satellites[i].RadToDeg(fi);
-            dummy.topo.elv = Satellites[i].RadToDeg(theta);
+            dummy.coords.geo.Lat = Satellites[i].GetLat();
+            dummy.coords.geo.Lon = Satellites[i].GetLon();
+            dummy.coords.geo.Alt = Satellites[i].GetAlt();
+            dummy.coords.topo.azm = Satellites[i].RadToDeg(fi);
+            dummy.coords.topo.elv = Satellites[i].RadToDeg(theta);
             timeDate = Satellites[i].CalendarDate(time);
-
-            onTime << std::to_string(timeDate.tm_mday)
+            dummy.name = s->cSatelliteName;
+            onTime1 << std::to_string(timeDate.tm_mday)
                 << "/" << std::to_string(timeDate.tm_mon + 1)
                 << "/" << std::to_string(timeDate.tm_year + 1900)
                 << "\t" << std::to_string(timeDate.tm_hour)
                 << ":" << std::to_string(timeDate.tm_min)
                 << ":" << std::to_string(timeDate.tm_sec);
-            Objects.push_back({ s->cSatelliteName, satNumer, onTime.str(), dummy, time, dir });
-            onTime.str("");
+            dummy.onTime = onTime1.str();
+            dummy.time = time;
+
+            Objects.push_back(dummy);
+            onTime1.str("");
         }
 
     }
