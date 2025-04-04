@@ -4,6 +4,7 @@
 #include <vector>
 
 int main() {
+	using namespace Sgpsdp;
 
 	std::vector<NORAD_DATA> Satellites;
 	const std::string file = "TLE.txt";
