@@ -1,3 +1,6 @@
+#ifndef VECTOR_H
+#define VECTOR_H
+
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <string.h> 
@@ -35,27 +38,30 @@
 class CVector
 {
 public:
-	CVector		();
-	CVector		(VECTOR vIn);
-	~CVector	();
+	CVector();
+	CVector(VECTOR vIn);
+	~CVector();
 public:
-	VECTOR 	GetVector	();
-	void 	SetVector	(VECTOR vIn);
-	int		GetDepth	();
-	void 	SetDepth	(int iDepth);
- 
+	VECTOR 	GetVector();
+	void 	SetVector(VECTOR vIn);
+	int		GetDepth();
+	void 	SetDepth(int iDepth);
 
 
-	double 	Dot		( VECTOR vIn );
-	VECTOR	Cross	( VECTOR vIn );
-	double 	Mag		( );
-	VECTOR 	Unit	( VECTOR vIn );
-	VECTOR	Diff	( VECTOR vIn );
-	VECTOR 	Sum		( VECTOR vIn );
-	VECTOR 	Scale	( double u );
-//	void 	ToSphere( double *X, double *az, double *el, double *range );
+
+	double 	Dot(VECTOR vIn);
+	VECTOR	Cross(VECTOR vIn);
+	double 	Mag();
+	VECTOR 	Unit(VECTOR vIn);
+	VECTOR	Diff(VECTOR vIn);
+	VECTOR 	Sum(VECTOR vIn);
+	VECTOR 	Scale(double u);
+	//	void 	ToSphere( double *X, double *az, double *el, double *range );
 protected:
 	int 	m_iDepth;
 	VECTOR	m_vector;
 
 };
+
+#endif //VECTOR_H
+

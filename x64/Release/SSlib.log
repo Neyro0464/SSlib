@@ -1,0 +1,9 @@
+﻿  SGP4.cpp
+C:\Users\Zuben\source\repos\SSlib\SSlib\SGP4.cpp(326,56): warning C4244: +=: преобразование "double" в "int", возможна потеря данных
+C:\Users\Zuben\source\repos\SSlib\SSlib\SGP4.cpp(376,11): warning C4267: инициализация: преобразование из "size_t" в "int"; возможна потеря данных
+  Создание кода
+  20 of 494 functions ( 4.0%) were compiled, the rest were copied from previous compilation.
+    8 functions were new in current compilation
+    36 functions had inline decision re-evaluated but remain unchanged
+  Создание кода завершено
+  SSlib.vcxproj -> C:\Users\Zuben\source\repos\SSlib\x64\Release\SSlib.exe
