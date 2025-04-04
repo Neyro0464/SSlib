@@ -10,7 +10,7 @@ add_library(SGPSDP STATIC
     Astro.cpp
     Math.cpp
     observer.cpp
-    SGP4.cpp
+    Satselect.cpp
     Sgpsdp.cpp
     time.cpp
     Utils.cpp
