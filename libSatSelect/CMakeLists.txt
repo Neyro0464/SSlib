@@ -1,30 +1,58 @@
 cmake_minimum_required(VERSION 3.10)
 project(SGPSDP)
 
-# Установка стандарта C++11
+# Настройка стандарта C++11
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Сборка статической библиотеки из исходных файлов
-add_library(SGPSDP STATIC
+# Поиск необходимых библиотек (пример для Debian)
+find_package(Threads REQUIRED)
+
+# Опции для сборки (STATIC или SHARED)
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+
+# Сборка библиотеки
+add_library(SGPSDP
     Astro.cpp
     Math.cpp
     observer.cpp
-    Satselect.cpp
+    SGP4.cpp
     Sgpsdp.cpp
     time.cpp
     Utils.cpp
 )
 
-# Добавление директории с заголовочными файлами
-target_include_directories(SGPSDP PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Добавление заголовочных файлов
+target_include_directories(SGPSDP 
+    PUBLIC 
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
-# Подавление предупреждений компилятора для GCC/Clang
+# Подавление предупреждений для GCC/Clang
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(SGPSDP PRIVATE -w)
+    # Для современных компиляторов можно добавить:
+    # target_compile_options(SGPSDP PRIVATE -Wno-deprecated)
 endif()
 
-# Отключение специфичных для MSVC предупреждений (если нужно)
-if(MSVC)
-    target_compile_options(SGPSDP PRIVATE /wd4996)
-endif()
+# Линковка системных библиотек (пример)
+target_link_libraries(SGPSDP 
+    PUBLIC 
+        ${CMAKE_THREAD_LIBS_INIT}   # Для многопоточности
+        m                          # Математическая библиотека (-lm)
+)
+
+# Установка библиотеки и заголовков
+install(TARGETS SGPSDP
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    INCLUDES DESTINATION include
+)
+
+# Генерация .pc файла для pkg-config (опционально)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/sgpsdp.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/sgpsdp.pc
+    @ONLY
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/sgpsdp.pc DESTINATION lib/pkgconfig)
